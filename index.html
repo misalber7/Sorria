@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guimeu, Guerreira 💛</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ffd6e8, #e3f0ff, #fff2d9);
+    font-family: "Poppins", sans-serif;
+}
+.particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+.particle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    animation: floatUp 8s linear infinite;
+    filter: blur(1px);
+}
+@keyframes floatUp {
+    from { transform: translateY(120vh) scale(1); opacity: 1; }
+    to { transform: translateY(-20vh) scale(0.5); opacity: 0; }
+}
+
+.message-box {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.7);
+    padding: 25px 35px;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    font-size: 1.5rem;
+    max-width: 80%;
+    text-align: center;
+    backdrop-filter: blur(8px);
+    z-index: 5;
+}
+.btn {
+    position: absolute;
+    top: 75%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 25px;
+    font-size: 1.2rem;
+    background: #ff92c2;
+    border: none;
+    color: white;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    transition: 0.2s;
+    z-index: 5;
+}
+.btn:hover {
+    transform: translateX(-50%) scale(1.05);
+    background: #ff7ab4;
+}
+.emoji-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10rem;
+    z-index: 4;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.bunny {
+    position: fixed;
+    bottom: 0;
+    right: 20px;
+    width: 150px;
+    z-index: 10;
+    animation: bunnyFloat 3s ease-in-out infinite;
+    cursor: pointer;
+}
+@keyframes bunnyFloat {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+    100% { transform: translateY(0); }
+}
+.speech {
+    position: fixed;
+    bottom: 160px;
+    right: 40px;
+    background: #ffffffdd;
+    padding: 15px 20px;
+    border-radius: 20px;
+    font-size: 1rem;
+    max-width: 200px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: none;
+    animation: fadeIn 0.4s ease forwards;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.bunny-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    background: rgba(255,255,255,0.85);
+    padding: 20px;
+    width: 90%;
+    max-width: 380px;
+    border-radius: 22px;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.15);
+    backdrop-filter: blur(12px);
+    text-align: center;
+    display: none;
+    z-index: 20;
+}
+.menu-bunny-img {
+    width: 140px;
+    margin: 0 auto;
+    display: block;
+}
+.menu-message {
+    margin-top: 20px;
+    font-size: 1.2rem;
+    padding: 18px;
+    min-height: 90px;
+    border-radius: 14px;
+    background: #fff4fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.05);
+    opacity: 0;
+    transition: opacity 1s ease;
+}
+.menu-close-btn {
+    margin-top: 15px;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 12px;
+    background: #ff92c2;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: 0.2s;
+}
+.menu-close-btn:hover { background: #ff7ab4; }
+@media (max-width: 480px) {
+    .menu-bunny-img { width: 110px; }
+    .menu-message { font-size: 1rem; min-height: 70px; }
+    .message-box { font-size: 1.2rem; padding: 18px 25px; }
+    .btn { font-size: 1rem; padding: 10px 20px; }
+}
+</style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="message-box" id="mainMessage">Carregando magia para a Guimeu, a nossa Guerreira linda… ✨</div>
+    <div class="emoji-box" id="emojiBox"></div>
+    <button class="btn" id="surpriseBtn">✨ Surpresa ✨</button>
+    <img src="img1.png" class="bunny" id="bunny" />
+    <div class="speech" id="speechBox">Olá Guimeu! Estou aqui contigo 💛</div>
+
+    <div id="bunnyMenu" class="bunny-menu">
+        <img id="menuBunnyImg" class="menu-bunny-img" src="img1.png" />
+        <div class="menu-message" id="menuMessage"></div>
+        <button class="menu-close-btn" id="menuClose">Fechar ✖️</button>
+    </div>
+
+    <script>
+        const container = document.getElementById("particles");
+        function createParticle() {
+            const p = document.createElement("div");
+            p.classList.add("particle");
+            p.style.left = Math.random() * 100 + "vw";
+            p.style.animationDuration = 6 + Math.random() * 5 + "s";
+            container.appendChild(p);
+            setTimeout(() => p.remove(), 10000);
+        }
+        setInterval(createParticle, 200);
+
+        const messages = [
+            "Guimeu, hoje tu mereces um sorriso bem grande 💛",
+            "A tua luz é tão bonita que torna tudo mais suave ✨",
+            "Tu tens um jeitinho único de deixar o dia mais doce.",
+            "Se eu pudesse, dava-te um abraço enorme agora 💖",
+            "Guimeu, tu és fofinha demais para deixares a tristeza ganhar.",
+            "Respira fundo… tu estás a fazer o teu melhor, minha querida.",
+            "Hoje é um bom dia para seres gentil contigo mesma 💛",
+            "Adoro ver-te brilhar, mesmo nos dias difíceis.",
+            "Guimeu, tu tens um coração tão lindo que ilumina qualquer canto ✨",
+            "Sabes o que combina contigo? Felicidade. Fica tão bem em ti 💕"
+        ];
+        let msgIndex = 0;
+        function rotateMessages() {
+            document.getElementById("mainMessage").textContent = messages[msgIndex];
+            msgIndex = (msgIndex + 1) % messages.length;
+        }
+        setInterval(rotateMessages, 4000);
+        rotateMessages();
+
+        const bunnyLines = [
+            "Oi Guimeu! Vim espalhar fofura por aqui 🐰✨",
+            "Sabias que eu adoro o teu jeitinho doce? 💛",
+            "Tu és tão especial que até eu fico feliz só de estar contigo 🐰💕",
+            "Vim lembrar-te que tu és incrível, só isso mesmo ✨",
+            "Posso pedir uma coisa? Sorri um bocinho pra mim? 🐰💛"
+        ];
+        const bunnyImages = [
+            "img1.png",
+            "img2.png",
+            "img3.png"
+        ];
+
+        const bunny = document.getElementById("bunny");
+        const menu = document.getElementById("bunnyMenu");
+        const menuImg = document.getElementById("menuBunnyImg");
+        const menuMsg = document.getElementById("menuMessage");
+        const menuClose = document.getElementById("menuClose");
+
+        bunny.addEventListener("click", () => {
+            menu.style.display = "block";
+            showRandomMessage();
+        });
+
+        menuClose.addEventListener("click", () => {
+            menu.style.display = "none";
+        });
+
+        function showRandomMessage() {
+            const msg = bunnyLines[Math.floor(Math.random() * bunnyLines.length)];
+            menuMsg.style.opacity = 0;
+            setTimeout(() => {
+                menuMsg.textContent = msg;
+                menuImg.src = bunnyImages[Math.floor(Math.random() * bunnyImages.length)];
+                menuMsg.style.opacity = 1;
+            }, 500);
+        }
+        setInterval(showRandomMessage, 7000);
+
+        const emojiBox = document.getElementById("emojiBox");
+        const emojis = ["✨","😍","💖","💕","🌸","🐰"];
+        document.getElementById("surpriseBtn").addEventListener("click", () => {
+            const e = emojis[Math.floor(Math.random() * emojis.length)];
+            emojiBox.textContent = e;
+            emojiBox.style.opacity = 1;
+            setTimeout(() => { emojiBox.style.opacity = 0; }, 1500);
+        });
+    </script>
+</body>
+</html>
