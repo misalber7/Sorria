@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quebra-Cabeça Fofinho da Guimel</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to right, #ffecd2, #fcb69f);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            transition: background 1s;
+        }
+
+        h1 {
+            color: #ff69b4;
+            text-shadow: 2px 2px #fff;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: clamp(24px, 5vw, 48px);
+        }
+
+        #description {
+            font-size: clamp(14px, 3vw, 20px);
+            color: #ff1493;
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 80%;
+        }
+
+        #puzzle {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .letter {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, background-color 0.3s;
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .letter:hover {
+            transform: scale(1.3) rotate(-5deg);
+        }
+
+        .selected {
+            background-color: #ffb6c1 !important;
+            transform: scale(1.4) rotate(5deg);
+            animation: bounce 0.4s;
+        }
+
+        @keyframes bounce {
+            0% {
+                transform: scale(1.2);
+            }
+
+            50% {
+                transform: scale(1.5);
+            }
+
+            100% {
+                transform: scale(1.4);
+            }
+        }
+
+        #confetti {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #message {
+            font-size: clamp(18px, 4vw, 28px);
+            color: #ff1493;
+            text-align: center;
+            margin-top: 20px;
+            max-width: 80%;
+            min-height: 40px;
+            transition: all 0.5s;
+        }
+
+        button {
+            background-color: #ff69b4;
+            color: #fff;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: clamp(16px, 3vw, 20px);
+            transition: transform 0.2s, background-color 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            transform: scale(1.15);
+            background-color: #ff85c1;
+        }
+
+        .heart {
+            position: absolute;
+            font-size: 24px;
+            animation: float 6s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-50px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button onclick="window.location.href='index.html'"
+        style="position:absolute; top:20px; left:20px; padding:10px 20px; border:none; background:#ff92c2; color:white; border-radius:12px; cursor:pointer; z-index:10;">⬅
+        Voltar</button>
+    <h1>Quebra-Cabeça Fofinho da Guimel 💖</h1>
+    <div id="description">
+        Olá Guimel! Monte as letras para formar a palavra correta.<br>
+        Clique em duas letras para trocar de lugar. Quando acertar, aparecerá uma curiosidade sobre você! ✨
+    </div>
+    <div id="puzzle"></div>
+    <button onclick="checkWord()">Verificar Palavra</button>
+    <div id="message"></div>
+    <canvas id="confetti"></canvas>
+
+    <script>
+        // Palavras e frases fofas
+        const words = ["AMOR", "SORRISO", "ALEGRIA", "FOFO", "BRILHO", "MAGIA", "DOÇURA", "LINDINHA"];
+        const phrases = {
+            "AMOR": ["Guimel espalha AMOR por onde passa! 💖", "Seu coração está cheio de AMOR, Guimel! ✨"],
+            "SORRISO": ["O seu SORRISO ilumina tudo! 😄", "Guimel, seu SORRISO é contagiante! 🌸"],
+            "ALEGRIA": ["Você é pura ALEGRIA, Guimel! 🥰", "A ALEGRIA te segue onde você vai! 🌈"],
+            "FOFO": ["Guimel é o ser mais FOFO do universo! 🐰", "FOFO é pouco para descrever você! 💕"],
+            "BRILHO": ["Guimel brilha como uma estrela! ✨", "Com seu BRILHO, tudo fica mais bonito! 🌟"],
+            "MAGIA": ["Você tem MAGIA em cada gesto! 🔮", "Guimel, você transforma tudo com sua MAGIA! ✨"],
+            "DOÇURA": ["Guimel é pura DOÇURA! 🍬", "Sua DOÇURA conquista todos ao redor! 💖"],
+            "LINDINHA": ["Não existe ninguém mais LINDINHA que você! 🌸", "Guimel, você é tão LINDINHA! 💕"]
+        };
+
+        // Variáveis do jogo
+        let currentWord = "";
+        let shuffled = [];
+        let selectedIndex = null;
+        const puzzleDiv = document.getElementById('puzzle');
+        const messageDiv = document.getElementById('message');
+        const confettiCanvas = document.getElementById('confetti');
+        const ctx = confettiCanvas.getContext('2d');
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+
+        // Funções auxiliares
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Fundo animado de corações
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.textContent = '💖';
+            heart.style.left = randomInt(0, window.innerWidth - 30) + 'px';
+            heart.style.animationDuration = (randomInt(4, 8)) + 's';
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), 8000);
+        }
+        setInterval(createHeart, 500);
+
+        // Inicializa puzzle
+        function startPuzzle() {
+            puzzleDiv.innerHTML = "";
+            messageDiv.textContent = "";
+            selectedIndex = null;
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            shuffled = shuffleArray(currentWord.split(''));
+
+            shuffled.forEach((letter, index) => {
+                const div = document.createElement('div');
+                div.classList.add('letter');
+                div.textContent = letter;
+                puzzleDiv.appendChild(div);
+            });
+        }
+
+        // Seleção de letras
+        puzzleDiv.addEventListener('click', e => {
+            if (!e.target.classList.contains('letter')) return;
+            const index = Array.from(puzzleDiv.children).indexOf(e.target);
+            if (selectedIndex === null) {
+                selectedIndex = index;
+                e.target.classList.add('selected');
+            } else {
+                const letters = puzzleDiv.children;
+                [letters[selectedIndex].textContent, letters[index].textContent] = [letters[index].textContent, letters[selectedIndex].textContent];
+                letters[selectedIndex].classList.remove('selected');
+                selectedIndex = null;
+            }
+        });
+
+        // Verifica palavra
+        function checkWord() {
+            const guess = Array.from(puzzleDiv.children).map(l => l.textContent).join('');
+            if (guess === currentWord) {
+                const phraseOptions = phrases[currentWord];
+                const phrase = phraseOptions[Math.floor(Math.random() * phraseOptions.length)];
+                messageDiv.textContent = `✨ ${phrase} ✨`;
+                launchConfetti();
+                setTimeout(startPuzzle, 3000);
+            } else {
+                messageDiv.textContent = "Ops! Tente novamente, Guimel! 🌸";
+            }
+        }
+
+        // Confetti animado
+        let confettiParticles = [];
+        function launchConfetti() {
+            confettiParticles = [];
+            for (let i = 0; i < 200; i++) {
+                confettiParticles.push({
+                    x: Math.random() * confettiCanvas.width,
+                    y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+                    r: Math.random() * 6 + 4,
+                    d: Math.random() * 10 + 5,
+                    color: `hsl(${Math.random() * 360},100%,50%)`,
+                    tilt: Math.random() * 10 - 10
+                });
+            }
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            confettiParticles.forEach(p => {
+                ctx.beginPath();
+                ctx.lineWidth = p.r / 2;
+                ctx.strokeStyle = p.color;
+                ctx.moveTo(p.x + p.tilt + p.r / 4, p.y);
+                ctx.lineTo(p.x + p.tilt, p.y + p.r);
+                ctx.stroke();
+                p.y += p.d;
+                if (p.y > confettiCanvas.height) p.y = -10;
+            });
+            requestAnimationFrame(animateConfetti);
+        }
+
+        // Responsividade
+        window.addEventListener('resize', () => {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        });
+
+        // Inicia o jogo
+        startPuzzle();
+    </script>
+</body>
+
+</html>

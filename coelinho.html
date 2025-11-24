@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Apanhe o Coelhinho — Guimel (Fullscreen)</title>
+    <style>
+        /* =========================
+   RESET & ROOT
+   ========================= */
+        :root {
+            --bg-soft: linear-gradient(180deg, #fff6fb, #eef8ff);
+            --accent: #ff8fcf;
+            --accent-2: #ffd87a;
+            --glass: rgba(255, 255, 255, 0.6);
+            --muted: #6b6b7a;
+            --ui: clamp(12px, 1.6vw, 18px);
+            --safe-pad: env(safe-area-inset-top, 16px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+            background: var(--bg-soft);
+            color: #222;
+        }
+
+        /* Fullscreen stage that fills the viewport */
+        #stageFull {
+            position: fixed;
+            inset: 0;
+            /* full-bleed */
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            background: radial-gradient(1200px 500px at 10% 8%, rgba(255, 230, 245, 0.45), transparent 8%), var(--bg-soft);
+            overflow: hidden;
+            -webkit-user-select: none;
+        }
+
+        /* central canvas-like area that uses most of screen but keeps some margin on huge displays */
+        #stage {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+        }
+
+        /* Top UI - anchored and responsive */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: max(10px, 1.6vh) clamp(12px, 3vw, 28px);
+            pointer-events: auto;
+            z-index: 140;
+            backdrop-filter: blur(6px);
+        }
+
+        .group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: var(--glass);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: var(--ui);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 20px rgba(30, 18, 40, 0.06);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            background: linear-gradient(180deg, #ffb9e6, #ff85d1);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: var(--ui);
+            box-shadow: 0 8px 20px rgba(255, 113, 185, 0.12);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(180deg, #9fe2ff, #79b8ff);
+        }
+
+        .btn.ghost {
+            background: transparent;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            color: var(--muted);
+        }
+
+        /* Arena - full flexible area */
+        #arena {
+            position: relative;
+            flex: 1;
+            margin: clamp(6px, 1.6vh, 18px);
+            border-radius: clamp(8px, 2vw, 20px);
+            overflow: hidden;
+            background:
+                radial-gradient(500px 220px at 10% 15%, rgba(255, 230, 245, 0.5), transparent 8%),
+                radial-gradient(600px 300px at 90% 80%, rgba(230, 245, 255, 0.5), transparent 12%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 0 18px 50px rgba(40, 20, 60, 0.06);
+            touch-action: none;
+        }
+
+        /* enchanted (bosque) style */
+        #arena.enchanted {
+            background:
+                radial-gradient(900px 480px at 15% 10%, rgba(230, 210, 255, 0.18), transparent 8%),
+                linear-gradient(180deg, #f5f0ffcc, #eef8ffcc);
+            box-shadow: 0 0 60px rgba(80, 30, 120, 0.06) inset;
+        }
+
+        /* Decorative particle layer */
+        .particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 18;
+        }
+
+        /* Bunny container & responsive hitbox */
+        .bunnyWrap {
+            position: absolute;
+            z-index: 80;
+            width: clamp(64px, 12vw, 140px);
+            height: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            transform-origin: center;
+            will-change: left, top, transform;
+        }
+
+        /* Make actual visible bunny responsive inside wrap */
+        .bunnySVG {
+            width: 100%;
+            height: auto;
+            display: block;
+            transform-origin: center;
+        }
+
+        /* Slight bounce animation */
+        .bouncing {
+            animation: bounce 900ms infinite;
+        }
+
+        @keyframes bounce {
+            0% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-6%)
+            }
+
+            100% {
+                transform: translateY(0)
+            }
+        }
+
+        /* Golden skin */
+        .bunnyWrap.golden svg {
+            filter: drop-shadow(0 12px 22px rgba(255, 200, 100, 0.18));
+        }
+
+        /* Bonus items */
+        .bonus {
+            position: absolute;
+            z-index: 70;
+            user-select: none;
+            font-size: clamp(18px, 4vw, 40px);
+            pointer-events: auto;
+            transform-origin: center;
+        }
+
+        /* Portal overlay (centers and scales with viewport) */
+        #portalOverlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            z-index: 190;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .portal {
+            width: clamp(180px, 32vmin, 520px);
+            height: clamp(180px, 32vmin, 520px);
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(120, 80, 220, 0.22), rgba(120, 200, 255, 0.12), rgba(255, 200, 160, 0.10));
+            filter: blur(6px);
+            animation: swirl 2000ms linear forwards;
+            box-shadow: 0 20px 80px rgba(100, 60, 160, 0.14) inset;
+        }
+
+        @keyframes swirl {
+            0% {
+                transform: scale(.3) rotate(0deg);
+                opacity: 0
+            }
+
+            60% {
+                opacity: 1
+            }
+
+            100% {
+                transform: scale(1.6) rotate(1080deg);
+                opacity: 1
+            }
+        }
+
+        /* Confetti pieces */
+        .confetti {
+            position: fixed;
+            z-index: 240;
+            pointer-events: none;
+            font-size: 18px;
+            transform: translateY(-10vh);
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-10vh) rotate(0);
+                opacity: 1
+            }
+
+            100% {
+                transform: translateY(110vh) rotate(720deg);
+                opacity: 0
+            }
+        }
+
+        /* Bottom footer + description */
+        .footer {
+            font-size: clamp(12px, 1.6vw, 15px);
+            text-align: center;
+            color: var(--muted);
+            padding: clamp(8px, 1.6vh, 14px);
+            z-index: 140;
+        }
+
+        /* end modal */
+        #endScreen {
+            position: fixed;
+            inset: 0;
+            display: none;
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 255, 255, 0.7));
+        }
+
+        .endBox {
+            background: white;
+            border-radius: 14px;
+            padding: 18px;
+            width: clamp(300px, 78vw, 900px);
+            box-shadow: 0 18px 60px rgba(20, 10, 40, 0.08);
+            text-align: center;
+        }
+
+        .endTitle {
+            font-size: clamp(18px, 3vw, 30px);
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .endText {
+            font-size: clamp(14px, 1.8vw, 18px);
+            color: #4b4b56;
+            margin-bottom: 12px;
+        }
+
+        /* small helpers */
+        .centerFlex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive adjustments for narrow portrait phones */
+        @media (max-width:420px) {
+            .topbar {
+                padding: max(8px, 1.2vh) 12px;
+                gap: 8px;
+            }
+
+            .card {
+                font-size: 13px;
+                padding: 6px 8px;
+            }
+
+            .btn {
+                padding: 8px 10px;
+                font-size: 14px;
+                border-radius: 10px;
+            }
+
+            .bunnyWrap {
+                width: clamp(60px, 20vw, 120px);
+            }
+
+            .bonus {
+                font-size: clamp(18px, 6.8vw, 36px);
+            }
+        }
+
+        #voltarBtn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            border: none;
+            background: #ff92c2;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 16px;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        #voltarBtn:hover {
+            background: #ff6699;
+            transform: scale(1.1);
+        }
+
+        /* Exemplo de conteúdo central */
+        #content {
+            text-align: center;
+            font-size: 24px;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div id="stageFull" aria-label="Apanhe o Coelhinho - Guimel (fullscreen)">
+        <div id="stage" role="application" aria-live="polite">
+
+            <!-- Top UI -->
+            <div class="topbar" role="region" aria-label="Informações do jogo">
+                <div class="group">
+                    <div class="card">Pontos: <strong id="score">0</strong></div>
+                    <div class="card">Tempo: <strong id="timer">30</strong>s</div>
+                    <div class="card">x<span id="multVal">1</span></div>
+                </div>
+                <div class="group controls" role="group" aria-label="Controles">
+                    <button class="btn ghost" id="soundToggle" aria-pressed="true" title="Ativar / Desativar som">🔊
+                        Som</button>
+                    <button class="btn secondary" id="startBtn">Iniciar</button>
+                    <button class="btn" id="resetBtn">Reiniciar</button>
+                    <button class="btn" onclick="window.location.href='index.html'">⬅ Voltar</button>
+                </div>
+            </div>
+
+            <!-- Arena (full) -->
+            <div id="arena" tabindex="0" aria-label="Área de jogo">
+                <div class="particles" id="particles"></div>
+
+                <!-- Bunny wrapper (hitbox + SVG inside) -->
+                <div id="bunnyWrap" class="bunnyWrap bouncing" style="left:40px; top:120px;" role="button"
+                    aria-label="Coelhinho fofo" tabindex="0">
+                    <!-- inline SVG bunny -->
+                    <svg class="bunnySVG" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="gEar" x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0" stop-color="#fff" />
+                                <stop offset="1" stop-color="#ffd6f6" />
+                            </linearGradient>
+                        </defs>
+                        <g transform="translate(18,4) scale(0.9)">
+                            <ellipse cx="40" cy="20" rx="18" ry="38" fill="url(#gEar)" stroke="#ffd4f0"
+                                stroke-width="2" />
+                            <ellipse cx="40" cy="20" rx="8" ry="24" fill="#ffd6f6" />
+                            <ellipse cx="110" cy="18" rx="18" ry="38" fill="url(#gEar)" stroke="#ffd4f0"
+                                stroke-width="2" />
+                            <ellipse cx="110" cy="18" rx="8" ry="24" fill="#ffd6f6" />
+                            <circle cx="75" cy="74" r="48" fill="#fff" stroke="#ffe3f5" stroke-width="3" />
+                            <circle cx="55" cy="82" r="8" fill="#ffd6e8" />
+                            <circle cx="95" cy="82" r="8" fill="#ffd6e8" />
+                            <ellipse cx="60" cy="74" rx="5" ry="8" fill="#47323a" />
+                            <ellipse cx="90" cy="74" rx="5" ry="8" fill="#47323a" />
+                            <path d="M75 86 q4 6 10 0" stroke="#ff7bb6" stroke-width="3" fill="none"
+                                stroke-linecap="round" />
+                            <ellipse cx="75" cy="120" rx="36" ry="28" fill="#fff" stroke="#ffe3f5" stroke-width="2" />
+                            <path d="M75 118 q-6 -8 -14 -2 q-2 2 0 6 q6 8 14 8 q8 -0 14 -8 q2 -4 0 -6 q-8 -6 -14 2"
+                                fill="#ffd6e8" opacity="0.9" />
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Bonus layer -->
+                <div id="bonusLayer"></div>
+
+                <!-- Portal overlay (hidden until triggered) -->
+                <div id="portalOverlay">
+                    <div class="portal" id="portalVisual"></div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">Apanhe o coelhinho em 30s. Alcança 20 pontos para desbloquear o Bosque Encantado! 💖
+            </div>
+
+            <!-- End modal -->
+            <div id="endScreen" role="dialog" aria-modal="true" aria-label="Tela final">
+                <div class="endBox" role="document">
+                    <div class="endTitle" id="endTitle">Fim do jogo!</div>
+                    <div class="endText" id="endMsg">Carregando resultados…</div>
+                    <div class="centerFlex" style="margin-top:12px;">
+                        <button class="btn" id="playAgain">Jogar outra vez</button>
+                        <button class="btn ghost" id="closeEnd">Fechar</button>
+                    </div>
+                    <div style="margin-top:12px;">Melhor pontuação local: <strong id="highscore">0</strong></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =========================
+     JAVASCRIPT: JOGO
+     ========================= -->
+    <script>
+        /* ====== CONFIG & STATE ====== */
+        const GAME_DURATION = 30;
+        const BUNNY_BASE_MOVE_MS = 900;
+        const BONUS_SPAWN_INTERVAL = [5500, 9800];
+        const BONUS_DURATION = 4000;
+        const FLEE_DISTANCE = 86; // tuned for responsive sizes
+        const TOUCH_OFFSET = 28;
+        const BOSQUE_THRESHOLD = 20;
+
+        const arena = document.getElementById('arena');
+        const bunnyWrap = document.getElementById('bunnyWrap');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const multEl = document.getElementById('multVal');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const soundToggle = document.getElementById('soundToggle');
+        const portalOverlay = document.getElementById('portalOverlay');
+        const portalVisual = document.getElementById('portalVisual');
+        const bonusLayer = document.getElementById('bonusLayer');
+        const particles = document.getElementById('particles');
+        const endScreen = document.getElementById('endScreen');
+        const endTitle = document.getElementById('endTitle');
+        const endMsg = document.getElementById('endMsg');
+        const playAgain = document.getElementById('playAgain');
+        const closeEnd = document.getElementById('closeEnd');
+        const highscoreEl = document.getElementById('highscore');
+
+        let arenaRect;
+        let score = 0, multiplier = 1, timeLeft = GAME_DURATION;
+        let running = false;
+        let moveInterval = null, gameTimer = null, bonusTimer = null, particleSpawner = null;
+        let bunnyMoveMs = BUNNY_BASE_MOVE_MS;
+        let soundEnabled = true;
+        let combo = 0, bestCombo = 0, bonusesCollected = 0;
+        let freezeUntil = 0, inBosque = false;
+        let bosqueMusic = null;
+
+        /* localStorage highscore */
+        function getHighscore() { return Number(localStorage.getItem('guimel_highscore') || 0); }
+        function setHighscore(v) { localStorage.setItem('guimel_highscore', String(v)); }
+
+        /* ======= Audio (WebAudio lightweight) ======= */
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioCtx();
+
+        function playBeep(freq = 440, time = 0.06, type = 'sine', vol = 0.06) {
+            if (!soundEnabled) return;
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = type; o.frequency.value = freq;
+            g.gain.value = vol;
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start();
+            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + time);
+            o.stop(audioCtx.currentTime + time + 0.02);
+        }
+        function playPop() { playBeep(880, 0.06, 'sine', 0.06); }
+        function playDing() { playBeep(1180, 0.12, 'sine', 0.08); }
+        function playVictory() { playBeep(520, 0.12, 'triangle', 0.08); setTimeout(() => playBeep(760, 0.08, 'sine', 0.06), 120); }
+
+        /* simple bosque ambient */
+        function startBosqueMusic() {
+            if (!soundEnabled) return;
+            if (bosqueMusic) return;
+            const o1 = audioCtx.createOscillator(), o2 = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o1.type = 'sine'; o1.frequency.value = 220;
+            o2.type = 'triangle'; o2.frequency.value = 330;
+            g.gain.value = 0.02;
+            const lfo = audioCtx.createOscillator();
+            lfo.frequency.value = 0.2;
+            const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 0.015;
+            lfo.connect(lfoGain); lfoGain.connect(g.gain);
+            o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+            o1.start(); o2.start(); lfo.start();
+            bosqueMusic = { o1, o2, lfo, g };
+        }
+        function stopBosqueMusic() { if (!bosqueMusic) return; bosqueMusic.o1.stop(); bosqueMusic.o2.stop(); bosqueMusic.lfo.stop(); bosqueMusic = null; }
+
+        /* ======= Utilities ======= */
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+        function randint(min, max) { return Math.floor(rand(min, max + 1)); }
+
+        /* ======= Bunny placement & movement ======= */
+        function updateArenaRect() { arenaRect = arena.getBoundingClientRect(); }
+        function placeBunnyRandom() {
+            updateArenaRect();
+            const bW = bunnyWrap.offsetWidth, bH = bunnyWrap.offsetHeight;
+            const pad = Math.max(12, Math.round(Math.min(arenaRect.width, arenaRect.height) * 0.02));
+            const x = rand(pad, Math.max(pad, arenaRect.width - bW - pad));
+            const y = rand(pad + 30, Math.max(pad + 30, arenaRect.height - bH - pad));
+            bunnyWrap.style.left = x + 'px'; bunnyWrap.style.top = y + 'px';
+        }
+
+        function scheduleBunnyMovement() {
+            if (moveInterval) clearInterval(moveInterval);
+            moveInterval = setInterval(() => { if (Date.now() < freezeUntil) return; adaptiveBunnyMove(); }, bunnyMoveMs);
+        }
+        function adaptiveBunnyMove() {
+            const elapsed = GAME_DURATION - timeLeft;
+            const prog = Math.min(1, elapsed / GAME_DURATION);
+            const minMs = inBosque ? 180 : 300;
+            const base = inBosque ? 700 : BUNNY_BASE_MOVE_MS;
+            bunnyMoveMs = Math.round(base - prog * (base - minMs));
+            const teleportChance = inBosque ? 0.32 : (prog > 0.6 ? 0.18 : 0.06);
+            if (Math.random() < teleportChance) {
+                placeBunnyRandom();
+                bunnyWrap.style.transform = 'scale(1.05) rotate(' + randint(-10, 10) + 'deg)';
+                setTimeout(() => bunnyWrap.style.transform = '', 140);
+            } else {
+                const curLeft = parseFloat(bunnyWrap.style.left || 0);
+                const curTop = parseFloat(bunnyWrap.style.top || 0);
+                const moveX = rand(-140, 140);
+                const moveY = rand(-110, 110);
+                let nx = curLeft + moveX, ny = curTop + moveY;
+                const bW = bunnyWrap.offsetWidth, bH = bunnyWrap.offsetHeight, pad = 8;
+                nx = Math.max(pad, Math.min(nx, arenaRect.width - bW - pad));
+                ny = Math.max(pad + 20, Math.min(ny, arenaRect.height - bH - pad));
+                bunnyWrap.style.left = nx + 'px'; bunnyWrap.style.top = ny + 'px';
+            }
+            if (moveInterval) { clearInterval(moveInterval); moveInterval = setInterval(() => { if (Date.now() < freezeUntil) return; adaptiveBunnyMove(); }, bunnyMoveMs); }
+        }
+
+        /* ======= Hit & scoring ======= */
+        function onBunnyHit(e) {
+            if (!running) return;
+            if (Date.now() < freezeUntil) { /* allowed */ }
+            const gained = 1 * multiplier;
+            score += gained;
+            combo++; bestCombo = Math.max(bestCombo, combo);
+            scoreEl.textContent = String(score);
+            multEl.textContent = String(multiplier);
+            showFloating('+' + gained, bunnyWrap);
+            playPop();
+            spawnSpark(bunnyWrap);
+            placeBunnyRandom();
+            if (score >= BOSQUE_THRESHOLD && !inBosque) triggerBosqueSequence();
+        }
+
+        /* floating text */
+        function showFloating(text, el) {
+            const rect = el.getBoundingClientRect();
+            const containerRect = arena.getBoundingClientRect();
+            const fx = document.createElement('div');
+            fx.textContent = text;
+            fx.style.position = 'absolute';
+            fx.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+            fx.style.top = (rect.top - containerRect.top - 8) + 'px';
+            fx.style.transform = 'translate(-50%,0)';
+            fx.style.fontWeight = '800';
+            fx.style.color = '#ff4fb6';
+            fx.style.fontSize = '16px';
+            fx.style.zIndex = 220;
+            fx.style.pointerEvents = 'none';
+            arena.appendChild(fx);
+            fx.animate([{ transform: 'translate(-50%,0)', opacity: 1 }, { transform: 'translate(-50%,-36px)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.8,.2,1)' });
+            setTimeout(() => fx.remove(), 900);
+        }
+
+        /* sparkles */
+        function spawnSpark(el) {
+            const r = el.getBoundingClientRect();
+            for (let i = 0; i < 6; i++) {
+                const s = document.createElement('div');
+                s.textContent = ['✨', '🌸', '💖'][Math.floor(Math.random() * 3)];
+                s.style.position = 'absolute';
+                s.style.left = (r.left + rand(0, r.width) - arena.getBoundingClientRect().left) + 'px';
+                s.style.top = (r.top + rand(0, r.height) - arena.getBoundingClientRect().top) + 'px';
+                s.style.fontSize = (12 + Math.random() * 18) + 'px';
+                s.style.pointerEvents = 'none'; s.style.zIndex = 210;
+                arena.appendChild(s);
+                const dy = -30 - Math.random() * 30;
+                s.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(${dy}px)`, opacity: 0 }], { duration: 800 + Math.random() * 400, easing: 'ease-out' });
+                setTimeout(() => s.remove(), 1400);
+            }
+        }
+
+        /* ======= Flee logic (cursor proximity) ======= */
+        function maybeFlee(pointerX, pointerY) {
+            if (!running) return;
+            const bRect = bunnyWrap.getBoundingClientRect();
+            const aRect = arena.getBoundingClientRect();
+            const bx = bRect.left + bRect.width / 2 - aRect.left;
+            const by = bRect.top + bRect.height / 2 - aRect.top;
+            const dx = pointerX - bx, dy = pointerY - by;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < FLEE_DISTANCE) {
+                const signX = (dx >= 0) ? -1 : 1;
+                const signY = (dy >= 0) ? -1 : 1;
+                let nx = parseFloat(bunnyWrap.style.left) + signX * rand(70, 180);
+                let ny = parseFloat(bunnyWrap.style.top) + signY * rand(40, 140);
+                nx = Math.max(8, Math.min(nx, arenaRect.width - bunnyWrap.offsetWidth - 8));
+                ny = Math.max(30, Math.min(ny, arenaRect.height - bunnyWrap.offsetHeight - 8));
+                bunnyWrap.style.left = nx + 'px'; bunnyWrap.style.top = ny + 'px';
+                bunnyWrap.style.transform = 'rotate(' + randint(-12, 12) + 'deg) scale(1.03)';
+                setTimeout(() => bunnyWrap.style.transform = '', 160);
+                if (soundEnabled) playBeep(920, 0.04, 'sine', 0.03);
+            }
+        }
+
+        /* pointer tracking */
+        function onPointerMove(e) {
+            if (!running) return;
+            const aRect = arena.getBoundingClientRect();
+            let px = 0, py = 0;
+            if (e.touches && e.touches[0]) { px = e.touches[0].clientX - aRect.left; py = e.touches[0].clientY - aRect.top; }
+            else { px = e.clientX - aRect.left; py = e.clientY - aRect.top; }
+            maybeFlee(px, py);
+        }
+
+        /* ======= Bonus system ======= */
+        const BONUS_TYPES = [
+            { id: 'star', emoji: '🌟', effect: () => { score += (inBosque ? 5 : 3) * multiplier; bonusesCollected++; playDing(); showFloating('+' + (inBosque ? 5 : 3), bunnyWrap); } },
+            { id: 'carrot', emoji: '🥕', effect: () => { multiplier = Math.min(5, multiplier === 2 ? 3 : 2); multEl.textContent = multiplier; bonusesCollected++; playDing(); showFloating('x' + multiplier, bunnyWrap); } },
+            { id: 'heart', emoji: '💗', effect: () => { freezeUntil = Date.now() + (inBosque ? 2000 : 1000); bonusesCollected++; playDing(); showFloating('Freeze!', bunnyWrap); } },
+        ];
+
+        function spawnBonusOnce() {
+            if (!running) return;
+            const type = BONUS_TYPES[Math.floor(Math.random() * BONUS_TYPES.length)];
+            const el = document.createElement('div');
+            el.className = 'bonus';
+            el.textContent = type.emoji;
+            updateArenaRect();
+            const bW = 36, bH = 36;
+            const x = rand(12, arenaRect.width - bW - 12);
+            const y = rand(40, arenaRect.height - bH - 12);
+            el.style.left = x + 'px'; el.style.top = y + 'px'; el.dataset.type = type.id;
+            bonusLayer.appendChild(el);
+            el.animate([{ transform: 'scale(.4)', opacity: 0 }, { transform: 'scale(1.05)', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.2,.9,.2,1)' });
+            const onTake = (evt) => {
+                evt.stopPropagation();
+                type.effect();
+                spawnBurst(el);
+                el.removeEventListener('pointerdown', onTake);
+                el.remove();
+                scoreEl.textContent = String(score); multEl.textContent = String(multiplier);
+                if (score >= BOSQUE_THRESHOLD && !inBosque) triggerBosqueSequence();
+            };
+            el.addEventListener('pointerdown', onTake);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, BONUS_DURATION);
+        }
+
+        function scheduleBonuses() {
+            if (bonusTimer) clearInterval(bonusTimer);
+            const low = inBosque ? 3500 : BONUS_SPAWN_INTERVAL[0];
+            const high = inBosque ? 7000 : BONUS_SPAWN_INTERVAL[1];
+            function scheduleNext() { bonusTimer = setTimeout(() => { spawnBonusOnce(); scheduleNext(); }, randint(low, high)); }
+            scheduleNext();
+        }
+
+        function spawnBurst(el) {
+            const r = el.getBoundingClientRect();
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.textContent = ['✨', '💫', '💖', '🌸'][Math.floor(Math.random() * 4)];
+                p.style.position = 'absolute';
+                p.style.left = (r.left - arena.getBoundingClientRect().left + r.width / 2) + 'px';
+                p.style.top = (r.top - arena.getBoundingClientRect().top + r.height / 2) + 'px';
+                p.style.fontSize = (10 + Math.random() * 18) + 'px';
+                p.style.zIndex = 210;
+                arena.appendChild(p);
+                p.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${rand(-40, 40)}px,${rand(-80, -20)}px)`, opacity: 0 }], { duration: 700 + Math.random() * 400, easing: 'ease-out' });
+                setTimeout(() => p.remove(), 1200);
+            }
+        }
+
+        /* confetti */
+        function spawnConfetti(amount = 60) {
+            for (let i = 0; i < amount; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.textContent = ['🎉', '✨', '💖', '🌈', '🦋'][Math.floor(Math.random() * 5)];
+                c.style.left = rand(2, 98) + 'vw';
+                c.style.fontSize = rand(14, 28) + 'px';
+                c.style.animationDuration = rand(2200, 4200) + 'ms';
+                c.style.transform = `rotate(${rand(0, 360)}deg)`;
+                document.body.appendChild(c);
+                setTimeout(() => { c.remove(); }, 4500);
+            }
+        }
+
+        /* ======= Bosque cinematic & transition ======= */
+        function triggerBosqueSequence() {
+            inBosque = true;
+            running = false;
+            portalOverlay.style.display = 'flex';
+            portalOverlay.style.pointerEvents = 'none';
+
+            const giant = document.createElement('div');
+            giant.style.position = 'absolute'; giant.style.zIndex = 200;
+            giant.style.left = '50%'; giant.style.top = '40%';
+            giant.style.transform = 'translate(-50%,-50%) scale(.2)';
+            giant.style.width = '46vmin'; giant.style.maxWidth = '520px';
+            giant.style.pointerEvents = 'none';
+            giant.innerHTML = `
+    <svg viewBox="0 0 200 200" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="ggEar" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fff8ef"/><stop offset="1" stop-color="#fff0cc"/></linearGradient>
+        <filter id="goldGlow"><feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#ffd86b" flood-opacity="0.25"/></filter>
+      </defs>
+      <g transform="translate(18,4) scale(0.9)">
+        <ellipse cx="40" cy="20" rx="18" ry="38" fill="url(#ggEar)" stroke="#ffd08a" stroke-width="2"/>
+        <ellipse cx="40" cy="20" rx="8" ry="24" fill="#ffe2b3"/>
+        <ellipse cx="110" cy="18" rx="18" ry="38" fill="url(#ggEar)" stroke="#ffd08a" stroke-width="2"/>
+        <ellipse cx="110" cy="18" rx="8" ry="24" fill="#ffe2b3"/>
+        <circle cx="75" cy="74" r="48" fill="#fff9f0" stroke="#ffe7b8" stroke-width="3" filter="url(#goldGlow)"/>
+        <circle cx="55" cy="82" r="8" fill="#ffd6a8"/><circle cx="95" cy="82" r="8" fill="#ffd6a8"/>
+        <ellipse cx="60" cy="74" rx="5" ry="8" fill="#47323a"/><ellipse cx="90" cy="74" rx="5" ry="8" fill="#47323a"/>
+        <path d="M75 86 q4 6 10 0" stroke="#ffb06f" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="75" cy="120" rx="36" ry="28" fill="#fff9f0" stroke="#ffe7b8" stroke-width="2"/>
+      </g>
+    </svg>`;
+            portalOverlay.appendChild(giant);
+
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            playBeep(440, 0.14, 'sine', 0.08);
+            setTimeout(() => playBeep(660, 0.12, 'sine', 0.09), 160);
+            spawnConfetti(40);
+
+            giant.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1.03)', opacity: 1 }], { duration: 1200, easing: 'cubic-bezier(.2,.9,.2,1)' });
+            portalVisual.animate([{ transform: 'scale(.3) rotate(0deg)', opacity: 0 }, { transform: 'scale(1.4) rotate(720deg)', opacity: 1 }], { duration: 1600, easing: 'cubic-bezier(.2,.9,.2,1)' });
+
+            setTimeout(() => {
+                const msg = document.createElement('div');
+                msg.style.position = 'absolute'; msg.style.zIndex = 210; msg.style.left = '50%'; msg.style.top = '20%';
+                msg.style.transform = 'translateX(-50%)'; msg.style.fontSize = '20px'; msg.style.fontWeight = '800'; msg.style.color = '#3a1850';
+                msg.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9))';
+                msg.style.padding = '10px 18px'; msg.style.borderRadius = '12px'; msg.style.boxShadow = '0 8px 30px rgba(50,20,80,0.08)';
+                msg.innerHTML = `“Guimeu… conseguiste o feito mais raro! Segue-me ao Bosque Encantado.”`;
+                portalOverlay.appendChild(msg);
+                playDing();
+            }, 900);
+
+            setTimeout(() => {
+                portalOverlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 900, easing: 'ease-in' });
+                const flash = document.createElement('div');
+                flash.style.position = 'fixed'; flash.style.inset = '0'; flash.style.background = 'white'; flash.style.zIndex = 260; flash.style.opacity = '0';
+                document.body.appendChild(flash);
+                flash.animate([{ opacity: 0 }, { opacity: 0.9 }, { opacity: 0 }], { duration: 900, easing: 'ease-in-out' });
+                setTimeout(() => { flash.remove(); }, 950);
+                setTimeout(() => transitionToBosque(), 350);
+                setTimeout(() => { portalOverlay.style.display = 'none'; portalOverlay.innerHTML = '<div class="portal" id="portalVisual"></div>'; }, 1200);
+            }, 2400);
+        }
+
+        /* transition to bosque */
+        function transitionToBosque() {
+            inBosque = true;
+            document.getElementById('arena').classList.add('enchanted');
+            bunnyWrap.classList.add('golden');
+            multiplier = 2; multEl.textContent = multiplier;
+            bunnyMoveMs = 420;
+            startBosqueMusic();
+            scheduleBonuses();
+            timeLeft += 10; if (timeLeft > 60) timeLeft = 60;
+            timerEl.textContent = String(timeLeft);
+            running = true;
+            scheduleBunnyMovement();
+            particleSpawner = setInterval(spawnBackgroundParticles, 900);
+            spawnConfetti(100);
+            showFloating('Bem-vinda ao Bosque Encantado!', bunnyWrap);
+            playVictory();
+        }
+
+        /* background decorative particles */
+        function spawnBackgroundParticles() {
+            const e = document.createElement('div');
+            const emojis = inBosque ? ['🌟', '🦋', '🌸', '✨', '💫'] : ['🌸', '✨', '💖', '🩷', '💫'];
+            e.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            e.style.position = 'absolute';
+            e.style.left = rand(2, 90) + 'vw';
+            e.style.top = rand(60, 100) + 'vh';
+            e.style.fontSize = rand(12, 28) + 'px';
+            e.style.opacity = 0.85;
+            particles.appendChild(e);
+            e.animate([{ transform: 'translateY(0) scale(.9)', opacity: 1 }, { transform: 'translateY(-140px) scale(1.1)', opacity: 0 }], { duration: 4000 + Math.random() * 2000, easing: 'ease-out' });
+            setTimeout(() => { e.remove(); }, 5200);
+        }
+
+        /* schedule bonuses */
+        function scheduleBonuses() {
+            if (bonusTimer) clearTimeout(bonusTimer);
+            const low = inBosque ? 3500 : BONUS_SPAWN_INTERVAL[0];
+            const high = inBosque ? 7000 : BONUS_SPAWN_INTERVAL[1];
+            function next() { bonusTimer = setTimeout(() => { spawnBonusOnce(); next(); }, randint(low, high)); }
+            next();
+        }
+
+        /* ======= Game lifecycle (start / end / reset) ======= */
+        function startGame() {
+            if (running) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            running = true; score = 0; multiplier = 1; combo = 0; bestCombo = 0; bonusesCollected = 0; freezeUntil = 0; inBosque = false;
+            timeLeft = GAME_DURATION;
+            scoreEl.textContent = '0'; multEl.textContent = '1'; timerEl.textContent = String(timeLeft);
+            bunnyWrap.style.display = 'flex'; bunnyWrap.classList.remove('golden');
+            placeBunnyRandom();
+            document.getElementById('arena').classList.remove('enchanted');
+            startBtn.disabled = true; startBtn.textContent = 'A jogar…';
+            scheduleBunnyMovement();
+            scheduleBonuses();
+            gameTimer = setInterval(() => {
+                timeLeft--; timerEl.textContent = String(timeLeft);
+                if (timeLeft <= 0) endGame(false);
+                else adaptiveBunnyMove();
+            }, 1000);
+            particleSpawner = setInterval(spawnBackgroundParticles, 1100);
+        }
+
+        function endGame(instant = false) {
+            running = false;
+            clearInterval(moveInterval); moveInterval = null;
+            clearInterval(gameTimer); gameTimer = null;
+            clearTimeout(bonusTimer); bonusTimer = null;
+            if (particleSpawner) clearInterval(particleSpawner);
+            stopBosqueMusic();
+            bunnyWrap.style.display = 'none';
+            if (instant || score >= BOSQUE_THRESHOLD) {
+                endTitle.textContent = 'GUIMEL — RAINHA DOS COELHINHOS! 👑🐰';
+                endMsg.innerHTML = 'Chegaste ao Bosque Encantado! Parabéns — és incrível!';
+                playVictory(); spawnConfetti(140);
+            } else if (score >= 15) {
+                endTitle.textContent = 'Quase lá! 🌟'; endMsg.innerHTML = 'Tão perto! Tenta outra vez para entrares no bosque.'; spawnConfetti(80); playDing();
+            } else if (score >= 10) {
+                endTitle.textContent = 'Uau! Tens reflexos mágicos ✨'; endMsg.innerHTML = 'Show! Continua a praticar.'; spawnConfetti(50); playDing();
+            } else if (score >= 5) {
+                endTitle.textContent = 'Bom trabalho, fofinha! 🎉'; endMsg.innerHTML = 'Conseguistes pelo menos 5 pontos — tenta de novo!'; spawnConfetti(30); playDing();
+            } else {
+                endTitle.textContent = 'Aiii… o coelhinho foi rápido 🐇'; endMsg.innerHTML = 'Não desanimes — volta a tentar!'; playPop();
+            }
+            const prev = getHighscore();
+            if (score > prev) { setHighscore(score); highscoreEl.textContent = String(score); } else { highscoreEl.textContent = String(prev); }
+            endScreen.style.display = 'flex';
+        }
+
+        function resetGame() {
+            running = false;
+            clearInterval(moveInterval); moveInterval = null;
+            clearInterval(gameTimer); gameTimer = null;
+            clearTimeout(bonusTimer); bonusTimer = null;
+            if (particleSpawner) clearInterval(particleSpawner);
+            stopBosqueMusic();
+            startBtn.disabled = false; startBtn.textContent = 'Iniciar';
+            score = 0; multiplier = 1; combo = 0; timeLeft = GAME_DURATION; bestCombo = 0; bonusesCollected = 0; freezeUntil = 0; inBosque = false;
+            scoreEl.textContent = '0'; multEl.textContent = '1'; timerEl.textContent = String(GAME_DURATION);
+            bonusLayer.innerHTML = ''; particles.innerHTML = '';
+            bunnyWrap.style.display = 'flex'; bunnyWrap.classList.remove('golden');
+            document.getElementById('arena').classList.remove('enchanted');
+            placeBunnyRandom();
+            endScreen.style.display = 'none';
+        }
+
+        /* ======= Interaction handlers ======= */
+        /* click/tap on bunny (big hitbox) */
+        bunnyWrap.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            onBunnyHit(e);
+        });
+        bunnyWrap.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onBunnyHit(e); } });
+
+        /* touch assist: tap near bunny counts */
+        arena.addEventListener('touchstart', (e) => {
+            const t = e.touches[0]; const aRect = arena.getBoundingClientRect();
+            const px = t.clientX - aRect.left, py = t.clientY - aRect.top;
+            const bRect = bunnyWrap.getBoundingClientRect(); const bx = bRect.left - aRect.left, by = bRect.top - aRect.top, bw = bRect.width, bh = bRect.height;
+            if (px >= bx - TOUCH_OFFSET && px <= bx + bw + TOUCH_OFFSET && py >= by - TOUCH_OFFSET && py <= by + bh + TOUCH_OFFSET) {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                onBunnyHit(e);
+            }
+        }, { passive: true });
+
+        /* pointer move for flee */
+        arena.addEventListener('pointermove', onPointerMove);
+        arena.addEventListener('pointerdown', (e) => { e.preventDefault(); });
+
+        /* UI Buttons */
+        startBtn.addEventListener('click', startGame);
+        resetBtn.addEventListener('click', resetGame);
+        playAgain.addEventListener('click', () => { resetGame(); startGame(); });
+        closeEnd.addEventListener('click', () => { endScreen.style.display = 'none'; });
+
+        soundToggle.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundToggle.innerText = soundEnabled ? '🔊 Som' : '🔇 Som';
+            soundToggle.setAttribute('aria-pressed', String(soundEnabled));
+        });
+
+        /* quick cheat for testing (G key) */
+        window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'g') { score += 5; scoreEl.textContent = String(score); playDing(); if (score >= BOSQUE_THRESHOLD && !inBosque) triggerBosqueSequence(); } });
+
+        /* ======= Particles initial & layout adjustments ======= */
+        function updateArenaRect() { arenaRect = arena.getBoundingClientRect(); }
+        window.addEventListener('resize', () => { updateArenaRect(); placeBunnyRandom(); });
+
+        function spawnBackgroundParticles() {
+            const e = document.createElement('div');
+            const emojis = inBosque ? ['🌟', '🦋', '🌸', '✨', '💫'] : ['🌸', '✨', '💖', '🩷', '💫'];
+            e.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            e.style.position = 'absolute';
+            e.style.left = rand(2, 90) + 'vw';
+            e.style.top = rand(60, 100) + 'vh';
+            e.style.fontSize = rand(12, 28) + 'px';
+            e.style.opacity = 0.85;
+            particles.appendChild(e);
+            e.animate([{ transform: 'translateY(0) scale(.9)', opacity: 1 }, { transform: 'translateY(-140px) scale(1.1)', opacity: 0 }], { duration: 4000 + Math.random() * 2000, easing: 'ease-out' });
+            setTimeout(() => { e.remove(); }, 5200);
+        }
+
+        /* ======= Initial setup ======= */
+        placeBunnyRandom();
+        updateArenaRect();
+        highscoreEl.textContent = String(getHighscore());
+
+        /* Accessibility: resume audio on first user gesture (some browsers) */
+        document.addEventListener('pointerdown', function resumeAudioOnce() { if (audioCtx.state === 'suspended') audioCtx.resume(); document.removeEventListener('pointerdown', resumeAudioOnce); });
+
+    </script>
+</body>
+
+</html>
