@@ -160,16 +160,93 @@
 
     <script>
         // Palavras e frases fofas
-        const words = ["AMOR", "SORRISO", "ALEGRIA", "FOFO", "BRILHO", "MAGIA", "DOÇURA", "LINDINHA"];
+        const words = ["AMOR", "SORRISO", "ALEGRIA", "FOFO", "BRILHO", "MAGIA", "DOÇURA", "LINDINHA", "TRAVESSA", "FRIA", "CHEEKY", "INFERNAL", "BRINQUEDO", "DOCINHO", "FOFURA", "ARTISTA", "ENIGMA"];
         const phrases = {
-            "AMOR": ["Guimel espalha AMOR por onde passa! 💖", "Seu coração está cheio de AMOR, Guimel! ✨"],
-            "SORRISO": ["O seu SORRISO ilumina tudo! 😄", "Guimel, seu SORRISO é contagiante! 🌸"],
-            "ALEGRIA": ["Você é pura ALEGRIA, Guimel! 🥰", "A ALEGRIA te segue onde você vai! 🌈"],
-            "FOFO": ["Guimel é o ser mais FOFO do universo! 🐰", "FOFO é pouco para descrever você! 💕"],
-            "BRILHO": ["Guimel brilha como uma estrela! ✨", "Com seu BRILHO, tudo fica mais bonito! 🌟"],
-            "MAGIA": ["Você tem MAGIA em cada gesto! 🔮", "Guimel, você transforma tudo com sua MAGIA! ✨"],
-            "DOÇURA": ["Guimel é pura DOÇURA! 🍬", "Sua DOÇURA conquista todos ao redor! 💖"],
-            "LINDINHA": ["Não existe ninguém mais LINDINHA que você! 🌸", "Guimel, você é tão LINDINHA! 💕"]
+            "AMOR": [
+                "Guimel espalha AMOR por onde passa! 💖",
+                "Seu coração está cheio de AMOR, Guimel! ✨",
+                "Mesmo quando faz travessuras, ainda tem AMOR de sobra! 😏💘"
+            ],
+            "SORRISO": [
+                "O seu SORRISO ilumina tudo! 😄",
+                "Guimel, seu SORRISO é contagiante! 🌸",
+                "Sorriso de travessa: cuidado, pode hipnotizar! 😜"
+            ],
+            "ALEGRIA": [
+                "Você é pura ALEGRIA, Guimel! 🥰",
+                "A ALEGRIA te segue onde você vai! 🌈",
+                "ALEGRIA com pitadas de maluquice, só para animar o mundo! 🤪"
+            ],
+            "FOFO": [
+                "Guimel é o ser mais FOFO do universo! 🐰",
+                "FOFO é pouco para descrever você! 💕",
+                "Fofo mas com um olhar que diz 'eu sei que posso te zoar' 😏"
+            ],
+            "BRILHO": [
+                "Guimel brilha como uma estrela! ✨",
+                "Com seu BRILHO, tudo fica mais bonito! 🌟",
+                "Brilha tanto que até as nuvens sentem inveja 😎☁️"
+            ],
+            "MAGIA": [
+                "Você tem MAGIA em cada gesto! 🔮",
+                "Guimel transforma tudo com sua MAGIA! ✨",
+                "Magia + travessura = combinação perfeita! 🪄😈"
+            ],
+            "DOÇURA": [
+                "Guimel é pura DOÇURA! 🍬",
+                "Sua DOÇURA conquista todos ao redor! 💖",
+                "Doçura que engana, porque depois vem a travessura 😏🍭"
+            ],
+            "LINDINHA": [
+                "Não existe ninguém mais LINDINHA que você! 🌸",
+                "Guimel, você é tão LINDINHA! 💕",
+                "Lindinha, mas com jeitinho de infernal... cuidado! 😈"
+            ],
+            "TRAVESSA": [
+                "Travessa sim, mas irresistivelmente encantadora! 😜",
+                "Guimel ama causar confusão de forma fofa! 🐾",
+                "Cada passo seu é pura travessura disfarçada de doçura!"
+            ],
+            "FRIA": [
+                "Guimel, tão adorável quanto fria, impossível resistir ao seu charme gelado! ❄️💖",
+                "Durona e encantadora: uma mistura que deixa todos curiosos 😏✨",
+                "Fria no olhar, travessa no sorriso — Guimel dita as regras do jogo! ❄️🌸"
+            ],
+            "CHEEKY": [
+                "Olhar CHEEKY que desafia o mundo! 😏",
+                "Travessa com estilo, Guimel não perdoa! 😄",
+                "Cheeky de forma fofa, impossível não amar! 💕"
+            ],
+            "INFERNAL": [
+                "Pequena infernal, mas cheia de charme! 🔥",
+                "Infernal sim, mas te conquista sem pedir! 😈💖",
+                "Infernal com estilo: risadas garantidas! 😜✨"
+            ],
+            "BRINQUEDO": [
+                "Guimel é um brinquedo de fofura ambulante! 🧸",
+                "Sempre pronta para brincar, mesmo com confetes no cabelo! 🎉",
+                "Brinquedo travesso: cuidado com os truques fofos! 😏"
+            ],
+            "DOCINHO": [
+                "Docinho e maroto, impossível resistir! 🍬😈",
+                "Guimel, você é como chocolate derretendo corações! 🍫💖",
+                "Doce por fora, travessa por dentro! 😜"
+            ],
+            "FOFURA": [
+                "A fofura personificada, Guimel! 🥰",
+                "Tanta fofura que o universo sorri de volta! 🌸",
+                "Fofura que provoca inveja até nas nuvens! ☁️💕"
+            ],
+            "ARTISTA": [
+                "Artista de charme e travessura! 🎨😏",
+                "Guimel pinta o mundo com cores de alegria e confusão! 🌈✨",
+                "Criativa e travessa, uma verdadeira obra de arte ambulante!"
+            ],
+            "ENIGMA": [
+                "Enigma adorável: ninguém decifra a Guimel! 🕵️‍♂️💖",
+                "Mistério e charme, sempre imprevisível! 🔮🌸",
+                "Enigma fofa: sorria e tente descobrir suas travessuras! 😜✨"
+            ]
         };
 
         // Variáveis do jogo
